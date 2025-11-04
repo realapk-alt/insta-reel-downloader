@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reel Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6">
+    <h1 class="text-2xl font-semibold mb-2">Reels / Instagram Downloader</h1>
+    <p class="text-sm text-gray-600 mb-4">Public reel URL डालें और Get Video दबाएँ।</p>
+
+    <form id="f" class="space-y-4">
+      <input id="url" type="url" required placeholder="https://www.instagram.com/reel/..."
+        class="w-full p-3 border rounded-lg" />
+      <div class="flex gap-3">
+        <button class="bg-indigo-600 text-white px-4 py-2 rounded" type="submit">Get Video</button>
+        <button id="clear" type="button" class="bg-gray-200 px-4 py-2 rounded">Clear</button>
+      </div>
+    </form>
+
+    <div id="result" class="mt-6 hidden">
+      <h2 class="text-lg font-medium mb-2">Result</h2>
+      <div id="preview" class="bg-gray-50 p-4 rounded-lg border">
+        <div id="videoWrap"></div>
+        <div id="links" class="mt-2"></div>
+      </div>
+    </div>
+
+    <div id="err" class="mt-4 hidden text-red-600"></div>
+    <div id="dbg" class="mt-4 text-xs text-gray-600 hidden"></div>
+  </div>
+
+<script>
+const f = document.getElementById('f');
+const urlI = document.getElementById('url');
+const result = document.getElementById('result');
+const videoWrap = document.getElementById('videoWrap');
+const links = document.getElementById('links');
+const errEl = document.getElementById('err');
+const dbg = document.getElementById('dbg');
+const clearBtn = document.getElementById('clear');
+
+clearBtn.addEventListener('click', () => {
+  urlI.value = '';
+  result.classList.add('hidden');
+  errEl.classList.add('hidden');
+  dbg.classList.add('hidden');
+  videoWrap.innerHTML = '';
+  links.innerHTML = '';
+});
+
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  result.classList.add('hidden');
+  errEl.classList.add('hidden');
+  dbg.classList.add('hidden');
+  videoWrap.innerHTML = '';
+  links.innerHTML = '';
+
+  const url = urlI.value.trim();
+  if (!url) return;
+
+  try {
+    const resp = await fetch('/api/fetch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const j = await resp.json();
+    if (!resp.ok) throw new Error(j.error || 'Server error');
+
+    result.classList.remove('hidden');
+    const v = document.createElement('video');
+    v.src = j.video_url;
+    v.controls = true;
+    v.className = 'w-full rounded';
+    videoWrap.appendChild(v);
+
+    const a = document.createElement('a');
+    a.href = j.video_url;
+    a.download = j.filename || 'video.mp4';
+    a.className = 'inline-block mt-3 bg-green-600 text-white px-4 py-2 rounded';
+    a.textContent = 'Download';
+    links.appendChild(a);
+
+    if (j.debug) {
+      dbg.textContent = JSON.stringify(j.debug, null, 2);
+      dbg.classList.remove('hidden');
+    }
+  } catch (err) {
+    errEl.textContent = 'Error: ' + err.message;
+    errEl.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>
